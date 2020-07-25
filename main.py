@@ -15,9 +15,9 @@ import numpy as np
 from keras.layers import Conv2D, Dense, Flatten, Permute
 from keras.models import Sequential
 from mlxtend.data import loadlocal_mnist
-from tqdm import trange
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import OneHotEncoder, LabelEncoder, normalize
+from sklearn.preprocessing import OneHotEncoder, normalize
+from tqdm import trange, tqdm
 
 plus = [
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -113,7 +113,7 @@ multi = [
      0],
     [0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 0, 0, 0, 0, 0, 0,
      0],
-    [0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -123,7 +123,7 @@ multi = [
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 ]
 
-operator_images = [plus, minus, multi]
+operator_images = {'+': normalize(plus), '-': normalize(minus), '*': normalize(multi)}
 
 
 def make_model(outputs) -> 'A Keras Model':
@@ -169,26 +169,25 @@ def make_model(outputs) -> 'A Keras Model':
     return model
 
 
-def generate_dataset(elements=500000):
+def generate_dataset(elements=750000):
+    image_file = './data/images.csv'
+    label_file = './data/labels.csv'
+
     images, labels = loadlocal_mnist(
-        images_path='train-images.idx3-ubyte',
-        labels_path='train-labels.idx1-ubyte'
+        images_path='./data/train-images.idx3-ubyte',
+        labels_path='./data/train-labels.idx1-ubyte'
     )
 
+    # normalize data
     images = normalize(images)
-    for i in range(len(operator_images)):
-        operator_images[i] = normalize(operator_images[i])
 
     X = []
     y = []
-    image_labels = []
     indexes = len(images) - 1
 
-    op_encoder = LabelEncoder()
     operators = np.array(["+", "-", "*"])
-    op_encoder.fit(operators)
 
-    for _ in trange(elements):
+    for _ in trange(elements, desc='Generating Data'):
         a_index = randint(0, indexes)
         a_image = np.reshape(images[a_index], (-1, 28))
         a_label = labels[a_index]
@@ -198,27 +197,27 @@ def generate_dataset(elements=500000):
         b_label = labels[b_index]
 
         operator = choice(operators)
-        op_i = op_encoder.transform([operator])[0]
-        op_image = operator_images[op_i]
+        op_image = operator_images.get(operator)
 
         input_images = [a_image, op_image, b_image]
 
+        # Pretty dangerous to use eval since the image labels could possibly be malicious code,
+        # but it's whatever for this application.
         input_label = [eval(f'{a_label} {operator} {b_label}')]
 
         X.append(input_images)
         y.append(input_label)
-        image_labels.append((a_label, operator, b_label))
 
     X = np.array(X)
     y = np.array(y)
 
-    return X, y, image_labels
+    return X, y
 
 
 def main():
     data_set_size = 750000
 
-    X, y, image_labels = generate_dataset(data_set_size)
+    X, y = generate_dataset(data_set_size)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33)
 
     encoder = OneHotEncoder()
@@ -233,7 +232,8 @@ def main():
     model.fit(
         x=X_train,
         y=y_train,
-        epochs=50,
+        batch_size=5,
+        epochs=10,
         validation_split=0.33,
         callbacks=[tensorboard_callback],
     )
@@ -243,19 +243,20 @@ def main():
 
     sse = 0
     num_wrong = 0
-    for i in range(len(predictions)):
-        squared_error = (predictions[i][0] - y_test[i][0]) ** 2
+
+    for i, result in tqdm(enumerate(predictions), desc='Testing'):
+        squared_error = (result[0] - y_test[i][0]) ** 2
         sse += squared_error
 
-        if predictions[i] != y_test[i][0]:
-            print(f'{i}) {image_labels[i][0]} {image_labels[i][1]} {image_labels[i][2]} = '
-                  f'{predictions[i][0]} -> Actual: {y_test[i][0]}')
+        if result != y_test[i][0]:
             num_wrong += 1
 
-    print(f'Total wrong: {num_wrong}/{len(y_test)}\n'
-          f'Sum Squared Error: {sse}')
+    print(f'\nResults\n'
+          f'\tTotal wrong: {num_wrong} / {len(y_test)} - {num_wrong / len(y_test) * 100:.2f}%\n'
+          f'\tSum Squared Error: {sse}')
 
     # todo: generate CSV for inputs, then encode it for the model
+    # todo: Save trained model
 
 
 if __name__ == '__main__':
