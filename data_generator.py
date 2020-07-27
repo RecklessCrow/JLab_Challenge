@@ -1,3 +1,12 @@
+"""
+data_generator.py
+
+Module to generate datasets based on requirements from J-lab
+
+Author: CJ Paterno
+Date: 02/20/2020
+"""
+
 from random import choice, randrange
 
 import numpy as np
@@ -13,7 +22,7 @@ images, labels = loadlocal_mnist(
 
 # Split data into train, val, test sets. Use random state to ensure the same elements are in
 # the sets across training sessions
-split_percent = 0.33
+split_percent = 0.2
 random_state = 808
 X_train, X_test, y_train, y_test = train_test_split(images, labels,
                                                     test_size=split_percent,
@@ -24,10 +33,14 @@ X_train, X_val, y_train, y_val = train_test_split(X_train, y_train,
 
 
 def preprocess_input(some_input):
+    """
+
+    :param some_input:
+    :return:
+    """
     X = []
 
     for i in some_input:
-
         # Split from the input array, we know images are 28 x 28 and that there is a single
         # character for the operator between the two images
         a_image = [i[j] for j in range(0, 28 * 28)]
@@ -48,16 +61,30 @@ def preprocess_input(some_input):
     return np.array(X)
 
 
-def generate_testing_images(batch_size=100000, gen_mode=0):
-    # Generation mode, select whether to generate off the test or validation set
-    # Default   0: for test set
-    #           1: for validation set
-    image_set = X_test
-    label_set = y_test
+def generate_images(batch_size=250000, gen_mode=0):
+    """
+
+    :param batch_size:
+    :param gen_mode: Generation mode
+                        0: train set
+                        1: validation set
+                        2: test set
+                        3: raw set
+    :return: data, labels, operations
+    """
+
+    image_set = X_train
+    label_set = y_train
 
     if gen_mode == 1:
         image_set = X_val
         label_set = y_val
+    elif gen_mode == 2:
+        image_set = X_test
+        label_set = y_test
+    elif gen_mode == 3:
+        image_set = images
+        label_set = labels
 
     X = []
     y = []
@@ -91,40 +118,27 @@ def generate_testing_images(batch_size=100000, gen_mode=0):
     return X, y, operations
 
 
-def generator(batch_size):
+def generator(batch_size, gen_mode=0):
+    """
+
+    :param gen_mode:
+    :param batch_size:
+    :return:
+    """
 
     while True:
-        X = []
-        y = []
 
-        for _ in range(batch_size):
-            a_index = randrange(0, len(X_train))
-            a_image = np.array(X_train[a_index]).reshape((-1, 28))
-            a_image = normalizer.transform(a_image)
-            a_label = y_train[a_index]
-
-            op = choice(OPERATORS)
-            op_image = np.array(OPERATOR_IMAGES.get(op))
-
-            b_index = randrange(0, len(X_train))
-            b_image = np.array(X_train[b_index]).reshape((-1, 28))
-            b_image = normalizer.transform(b_image)
-            b_label = y_train[b_index]
-
-            X_input = [a_image, op_image, b_image]
-            operation = f'{a_label} {op} {b_label}'
-            y_input = [eval(operation)]
-
-            X.append(X_input)
-            y.append(y_input)
-
-        X = np.array(X)
-        y = output_encoder.transform(y).toarray()
+        X, y, _ = generate_images(batch_size, gen_mode)
 
         yield X, y
 
 
 def generate_example_input(num_examples=10000):
+    """
+
+    :param num_examples:
+    :return:
+    """
     X = []
     y = []
     operations = []

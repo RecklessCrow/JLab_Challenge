@@ -15,6 +15,10 @@ from train_model import get_results
 
 
 def main():
+    """
+    Main function
+    :return:
+    """
 
     X, y, operations = generate_example_input()
 

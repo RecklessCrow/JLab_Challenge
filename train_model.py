@@ -1,15 +1,29 @@
+"""
+train_model.py
+
+Module to create, train, and test a keras model
+
+Author: CJ Paterno
+Date: 02/20/2020
+"""
+
 from datetime import datetime
-from os.path import isdir
 
 import keras
 from keras.layers import Conv2D, Dense, Flatten, Permute
 from keras.models import Sequential
 
 from constants import output_encoder
-from data_generator import generator, generate_testing_images
+from data_generator import generator, generate_images
 
 
 def make_model(num_out=49):
+    """
+    Make a new keras model
+    :param num_out: number of outputs
+    :return: a keras model
+    """
+
     model = Sequential()
 
     model.add(Permute(
@@ -52,20 +66,24 @@ def make_model(num_out=49):
     return model
 
 
+# Current date to the minute for logging
 curr_date = datetime.now().strftime("%Y-%m-%d_%H:%M")
 
 
-def train(model_file=None):
-    epochs = 100
-    steps_per_epoch = 100
+def train(load_file=None, save_file=None):
+    """
+    Train a keras model
+    :param load_file: load a previously saved checkpoint or model
+    :param save_file: file to save trained model to
+    """
+    epochs = 10
+    steps_per_epoch = 500
     batch_size = epochs * steps_per_epoch
 
     # Create model
     # Load checkpoint if exists
-    previous_checkpoint = f'./checkpoints/2020-07-27_14:30'
-    if isdir(previous_checkpoint):
-        model = keras.models.load_model(previous_checkpoint)
-
+    if load_file is not None:
+        model = keras.models.load_model(load_file)
     else:
         model = make_model()
 
@@ -77,13 +95,11 @@ def train(model_file=None):
     checkpoint_file = f'./checkpoints/{curr_date}'
     checkpoint_callback = keras.callbacks.ModelCheckpoint(filepath=checkpoint_file)
 
-    # Generate validation set
-    val_x, val_y, _ = generate_testing_images(gen_mode=1)
-
     # Train model
     model.fit(
         generator(batch_size=batch_size),
-        validation_data=(val_x, val_y),
+        validation_data=generator(batch_size=batch_size // 3, gen_mode=1),
+        validation_steps=steps_per_epoch // 3,
         epochs=epochs,
         steps_per_epoch=steps_per_epoch,
         callbacks=[tensorboard_callback, checkpoint_callback],
@@ -91,17 +107,22 @@ def train(model_file=None):
 
     score = test(model)
 
-    if model_file is None:
+    if save_file is None:
         model.save(f'./models/{score}')
     else:
-        model.save(model_file)
+        model.save(save_file)
 
 
 def test(model):
+    """
+    Test a model
+    :param model: Model to test
+    :return: Sum squared error
+    """
 
-    print('Testing...')
+    print('\nTesting...')
 
-    x, y, operations = generate_testing_images()
+    x, y, operations = generate_images(batch_size=500000, gen_mode=2)
     predictions = model.predict(x)
     predictions = output_encoder.inverse_transform(predictions)
     y = output_encoder.inverse_transform(y)
@@ -112,6 +133,13 @@ def test(model):
 
 
 def get_results(actual, expected, operations):
+    """
+    Calculate sum squared error and print test results
+    :param actual: Model predicted results
+    :param expected: Expected results
+    :param operations: List of operations preformed to get results
+    :return: Sum squared error
+    """
     sse = 0
     num_wrong = 0
 
@@ -127,7 +155,7 @@ def get_results(actual, expected, operations):
     percent_wrong = num_wrong / len(expected) * 100
 
     print(f'Results\n'
-          f'\tTotal Wrong   - {num_wrong} / {len(x)}\n'
+          f'\tTotal Wrong   - {num_wrong} / {len(expected)}\n'
           f'\tAccuracy      - {100 - percent_wrong:.2f}%\n'
           f'\tSSE           - {sse}')
 
