@@ -1,12 +1,12 @@
 from datetime import datetime
-from os.path import isfile, isdir
+from os.path import isdir
 
 import keras
 from keras.layers import Conv2D, Dense, Flatten, Permute
 from keras.models import Sequential
 
 from constants import output_encoder
-from data_generator import generator, generate_images
+from data_generator import generator, generate_testing_images
 
 
 def make_model(num_out=49):
@@ -49,8 +49,6 @@ def make_model(num_out=49):
         metrics=['accuracy', 'mse']
     )
 
-    print(model.summary())
-
     return model
 
 
@@ -66,11 +64,12 @@ def train():
     # Load checkpoint if exists
     previous_checkpoint = f'./checkpoints/2020-07-27_14:30'
     if isdir(previous_checkpoint):
-        print('Loading Checkpoint')
         model = keras.models.load_model(previous_checkpoint)
 
     else:
         model = make_model()
+
+    print(model.summary())
 
     # Create callbacks
     log_dir = f'./logs/scalars/{curr_date}'
@@ -79,7 +78,7 @@ def train():
     checkpoint_callback = keras.callbacks.ModelCheckpoint(filepath=checkpoint_file)
 
     # Generate validation set
-    val_x, val_y, _ = generate_images(100000)
+    val_x, val_y, _ = generate_testing_images(100000)
 
     # Train model
     model.fit(
@@ -94,7 +93,7 @@ def train():
 
 
 def test(model):
-    x, y, operation = generate_images(100000)
+    x, y, operation = generate_testing_images(100000)
     predictions = model.predict(x)
     predictions = output_encoder.inverse_transform(predictions)
     y = output_encoder.inverse_transform(y)
