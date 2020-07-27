@@ -1,11 +1,12 @@
 from datetime import datetime
+from os.path import isfile, isdir
 
 import keras
 from keras.layers import Conv2D, Dense, Flatten, Permute
 from keras.models import Sequential
 
-from data_generator import generator, generate_images
 from constants import output_encoder
+from data_generator import generator, generate_images
 
 
 def make_model(num_out=49):
@@ -17,15 +18,15 @@ def make_model(num_out=49):
     ))
 
     model.add(Conv2D(
-        64,
-        (16, 16),
-        strides=(4, 4),
+        30,
+        (20, 20),
+        strides=(2, 2),
         activation='relu',
     ))
 
     model.add(Conv2D(
-        64,
-        (4, 4),
+        90,
+        (5, 5),
         strides=(2, 2),
         activation='relu'
     ))
@@ -33,7 +34,7 @@ def make_model(num_out=49):
     model.add(Flatten())
 
     model.add(Dense(
-        units=128,
+        units=300,
         activation='relu'
     ))
 
@@ -53,33 +54,47 @@ def make_model(num_out=49):
     return model
 
 
+curr_date = datetime.now().strftime("%Y-%m-%d_%H:%M")
+
+
 def train():
-    epochs = 32
-    steps_per_epoch = 1000
-    batch_size = 128
+    epochs = 10
+    steps_per_epoch = 5000
+    batch_size = 500
 
-    model = make_model()
+    # Create model
+    # Load checkpoint if exists
+    previous_checkpoint = f'./checkpoints/2020-07-27_14:30'
+    if isdir(previous_checkpoint):
+        print('Loading Checkpoint')
+        model = keras.models.load_model(previous_checkpoint)
 
-    logdir = f"logs/scalars/" + datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir)
+    else:
+        model = make_model()
 
-    val_x, val_y, _ = generate_images(steps_per_epoch)
+    # Create callbacks
+    log_dir = f'./logs/scalars/{curr_date}'
+    tensorboard_callback = keras.callbacks.TensorBoard(log_dir=log_dir)
+    checkpoint_file = f'./checkpoints/{curr_date}'
+    checkpoint_callback = keras.callbacks.ModelCheckpoint(filepath=checkpoint_file)
 
-    # Train my_model
+    # Generate validation set
+    val_x, val_y, _ = generate_images(100000)
+
+    # Train model
     model.fit(
         generator(batch_size=batch_size),
         validation_data=(val_x, val_y),
         epochs=epochs,
         steps_per_epoch=steps_per_epoch,
-        callbacks=[tensorboard_callback],
+        callbacks=[tensorboard_callback, checkpoint_callback],
     )
 
-    model.save('./my_model')
+    model.save(f'./models/{curr_date}')
 
 
 def test(model):
-    print('\nTesting...\n')
-    x, y, operation = generate_images(250000, output_encoder)
+    x, y, operation = generate_images(100000)
     predictions = model.predict(x)
     predictions = output_encoder.inverse_transform(predictions)
     y = output_encoder.inverse_transform(y)
@@ -104,6 +119,9 @@ def test(model):
 
 
 if __name__ == '__main__':
+
+    model_file = f'./models/{curr_date}'
+
     train()
-    my_model = keras.models.load_model('./my_model')
+    my_model = keras.models.load_model(model_file)
     test(my_model)

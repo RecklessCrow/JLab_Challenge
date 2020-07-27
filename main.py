@@ -9,8 +9,8 @@ Date: 02/20/2020
 
 import keras
 
-from data_generator import preprocess_input, generate_example_input
 from constants import output_encoder
+from data_generator import preprocess_input, generate_example_input
 
 
 def main():
@@ -20,7 +20,7 @@ def main():
     X = preprocess_input(some_input)
     y = some_label
 
-    model = keras.models.load_model('./my_model')
+    model = keras.models.load_model('./models/2020-07-27_14:49')
 
     predictions = output_encoder.inverse_transform(model.predict(X))
 

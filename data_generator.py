@@ -15,6 +15,7 @@ def preprocess_input(some_input):
     X = []
 
     for i in some_input:
+
         a_image = [i[j] for j in range(0, 28 * 28)]
         a_image = np.reshape(a_image, (-1, 28))
         a_image = normalizer.transform(a_image)
