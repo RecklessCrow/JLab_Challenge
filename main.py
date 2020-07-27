@@ -11,37 +11,20 @@ import keras
 
 from constants import output_encoder
 from data_generator import preprocess_input, generate_example_input
+from train_model import get_results
 
 
 def main():
 
-    some_input, some_label, operation = generate_example_input()
+    X, y, operations = generate_example_input()
 
-    X = preprocess_input(some_input)
-    y = some_label
+    X = preprocess_input(X)
 
     model = keras.models.load_model('./models/2020-07-27_14:49')
 
     predictions = output_encoder.inverse_transform(model.predict(X))
 
-    sse = 0
-    num_wrong = 0
-
-    for i, result in enumerate(predictions):
-        squared_error = (result[0] - y[i][0]) ** 2
-        sse += squared_error
-
-        if result != y[i][0]:
-            print(f'Expected: {operation[i]} = {y[i][0]}\n'
-                  f'Actual:   {result[0]}\n')
-            num_wrong += 1
-
-    percent_wrong = num_wrong / len(y) * 100
-
-    print(f'Results\n'
-          f'\tTotal Wrong   - {num_wrong} / {len(some_input)}\n'
-          f'\tAccuracy      - {100 - percent_wrong:.2f}%\n'
-          f'\tSSE           - {sse}')
+    get_results(predictions, y, operations)
 
 
 if __name__ == '__main__':

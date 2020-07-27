@@ -55,10 +55,10 @@ def make_model(num_out=49):
 curr_date = datetime.now().strftime("%Y-%m-%d_%H:%M")
 
 
-def train():
-    epochs = 10
-    steps_per_epoch = 5000
-    batch_size = 500
+def train(model_file=None):
+    epochs = 100
+    steps_per_epoch = 100
+    batch_size = epochs * steps_per_epoch
 
     # Create model
     # Load checkpoint if exists
@@ -78,7 +78,7 @@ def train():
     checkpoint_callback = keras.callbacks.ModelCheckpoint(filepath=checkpoint_file)
 
     # Generate validation set
-    val_x, val_y, _ = generate_testing_images(100000)
+    val_x, val_y, _ = generate_testing_images(gen_mode=1)
 
     # Train model
     model.fit(
@@ -89,38 +89,51 @@ def train():
         callbacks=[tensorboard_callback, checkpoint_callback],
     )
 
-    model.save(f'./models/{curr_date}')
+    score = test(model)
+
+    if model_file is None:
+        model.save(f'./models/{score}')
+    else:
+        model.save(model_file)
 
 
 def test(model):
-    x, y, operation = generate_testing_images(100000)
+
+    print('Testing...')
+
+    x, y, operations = generate_testing_images()
     predictions = model.predict(x)
     predictions = output_encoder.inverse_transform(predictions)
     y = output_encoder.inverse_transform(y)
+
+    sse = get_results(predictions, y, operations)
+
+    return sse
+
+
+def get_results(actual, expected, operations):
     sse = 0
     num_wrong = 0
 
-    for i, result in enumerate(predictions):
-        squared_error = (result[0] - y[i][0]) ** 2
+    for i, result in enumerate(actual):
+        squared_error = (result[0] - expected[i][0]) ** 2
         sse += squared_error
 
-        if result != y[i][0]:
-            print(f'Expected: {operation[i]} = {y[i][0]}\n'
+        if result != expected[i][0]:
+            print(f'Expected: {operations[i]} = {expected[i][0]}\n'
                   f'Actual:   {result[0]}\n')
             num_wrong += 1
 
-    percent_wrong = num_wrong / len(y) * 100
+    percent_wrong = num_wrong / len(expected) * 100
 
     print(f'Results\n'
           f'\tTotal Wrong   - {num_wrong} / {len(x)}\n'
           f'\tAccuracy      - {100 - percent_wrong:.2f}%\n'
           f'\tSSE           - {sse}')
 
+    return sse
+
 
 if __name__ == '__main__':
 
-    model_file = f'./models/{curr_date}'
-
     train()
-    my_model = keras.models.load_model(model_file)
-    test(my_model)
