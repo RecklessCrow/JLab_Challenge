@@ -10,6 +10,7 @@ Date: 02/20/2020
 from datetime import datetime
 
 import keras
+import numpy as np
 from keras.layers import Conv2D, Dense, Flatten, Permute
 from keras.models import Sequential
 
@@ -32,23 +33,30 @@ def make_model(num_out=49):
     ))
 
     model.add(Conv2D(
-        30,
-        (20, 20),
-        strides=(2, 2),
+        32,
+        (8, 8),
+        strides=(4, 4),
         activation='relu',
     ))
 
     model.add(Conv2D(
-        90,
-        (5, 5),
+        64,
+        (4, 4),
         strides=(2, 2),
+        activation='relu'
+    ))
+
+    model.add(Conv2D(
+        64,
+        (2, 2),
+        strides=(1, 1),
         activation='relu'
     ))
 
     model.add(Flatten())
 
     model.add(Dense(
-        units=300,
+        units=512,
         activation='relu'
     ))
 
@@ -76,8 +84,8 @@ def train(load_file=None, save_file=None):
     :param load_file: load a previously saved checkpoint or model
     :param save_file: file to save trained model to
     """
-    epochs = 10
-    steps_per_epoch = 500
+    epochs = 250
+    steps_per_epoch = 50
     batch_size = epochs * steps_per_epoch
 
     # Create model
@@ -97,11 +105,11 @@ def train(load_file=None, save_file=None):
 
     # Train model
     model.fit(
-        generator(batch_size=batch_size),
-        validation_data=generator(batch_size=batch_size // 3, gen_mode=1),
-        validation_steps=steps_per_epoch // 3,
+        generator(batch_size=batch_size, gen_mode=0),
         epochs=epochs,
         steps_per_epoch=steps_per_epoch,
+        validation_data=generator(batch_size=batch_size // 3, gen_mode=1),
+        validation_steps=steps_per_epoch // 3,
         callbacks=[tensorboard_callback, checkpoint_callback],
     )
 
@@ -140,16 +148,14 @@ def get_results(actual, expected, operations):
     :param operations: List of operations preformed to get results
     :return: Sum squared error
     """
-    sse = 0
+
+    sse = np.sum(np.square(actual - expected))
     num_wrong = 0
 
     for i, result in enumerate(actual):
-        squared_error = (result[0] - expected[i][0]) ** 2
-        sse += squared_error
-
         if result != expected[i][0]:
-            print(f'Expected: {operations[i]} = {expected[i][0]}\n'
-                  f'Actual:   {result[0]}\n')
+            # print(f'Expected: {operations[i]} = {expected[i][0]}\n'
+            #       f'Actual:   {result[0]}\n')
             num_wrong += 1
 
     percent_wrong = num_wrong / len(expected) * 100

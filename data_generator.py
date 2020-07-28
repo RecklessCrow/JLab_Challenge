@@ -16,20 +16,15 @@ from sklearn.model_selection import train_test_split
 from constants import normalizer, OPERATOR_IMAGES, OPERATORS, output_encoder
 
 images, labels = loadlocal_mnist(
-    images_path='mnist/train-images.idx3-ubyte',
-    labels_path='mnist/train-labels.idx1-ubyte'
+    images_path='data/train-images.idx3-ubyte',
+    labels_path='data/train-labels.idx1-ubyte'
 )
 
 # Split data into train, val, test sets. Use random state to ensure the same elements are in
 # the sets across training sessions
 split_percent = 0.2
-random_state = 808
-X_train, X_test, y_train, y_test = train_test_split(images, labels,
-                                                    test_size=split_percent,
-                                                    random_state=random_state)
-X_train, X_val, y_train, y_val = train_test_split(X_train, y_train,
-                                                  test_size=split_percent,
-                                                  random_state=random_state)
+X_train, X_test, y_train, y_test = train_test_split(images, labels, test_size=split_percent)
+X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=split_percent)
 
 
 def preprocess_input(some_input):
@@ -40,18 +35,18 @@ def preprocess_input(some_input):
     """
     X = []
 
-    for i in some_input:
+    for an_input in some_input:
         # Split from the input array, we know images are 28 x 28 and that there is a single
         # character for the operator between the two images
-        a_image = [i[j] for j in range(0, 28 * 28)]
-        a_image = np.reshape(a_image, (-1, 28))
+        a_image = [an_input[i] for i in range(0, 28 * 28)]
+        a_image = np.reshape(a_image, (-1, 28)).astype(np.float)
         a_image = normalizer.transform(a_image)
 
-        op = i[28 * 28]
+        op = an_input[28 * 28]
         op_image = OPERATOR_IMAGES.get(op)
 
-        b_image = [i[j] for j in range(28 * 28 + 1, len(some_input) - 1)]
-        b_image = np.reshape(b_image, (-1, 28))
+        b_image = [an_input[i] for i in range(28 * 28 + 1, len(an_input))]
+        b_image = np.reshape(b_image, (-1, 28)).astype(np.float)
         b_image = normalizer.transform(b_image)
 
         input_images = [a_image, op_image, b_image]
