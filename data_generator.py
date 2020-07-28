@@ -23,8 +23,10 @@ images, labels = loadlocal_mnist(
 # Split data into train, val, test sets. Use random state to ensure the same elements are in
 # the sets across training sessions
 split_percent = 0.2
-X_train, X_test, y_train, y_test = train_test_split(images, labels, test_size=split_percent)
-X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=split_percent)
+X_train, X_test, y_train, y_test = train_test_split(images, labels, test_size=split_percent,
+                                                    random_state=2020)
+X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=split_percent,
+                                                  random_state=2020)
 
 
 def preprocess_input(some_input):
