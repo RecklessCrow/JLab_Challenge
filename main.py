@@ -7,6 +7,7 @@ Author: CJ Paterno
 Date: 02/20/2020
 """
 import csv
+import os
 
 import keras
 import numpy as np
@@ -16,31 +17,34 @@ from data_generator import preprocess_input
 from train_model import get_results
 
 
+# Score to beat, SSE: 35880.24
+
+
 def main():
     """
     Main function
     :return:
     """
 
-    with open('./data/test_data.csv') as f:
+    test_data_path = os.path.join('data', 'test_data.csv')
+    test_label_path = os.path.join('data', 'test_labels.csv')
+
+    with open(test_data_path) as f:
         reader = csv.reader(f)
         X = list(reader)
 
-    with open('./data/test_labels.csv') as f:
+    with open(test_label_path) as f:
         reader = csv.reader(f)
         y = np.array(list(reader)).astype(np.int)
 
-    operations = []
-
     X = preprocess_input(X)
 
-    model = keras.models.load_model('./models/2404574')
-
-    print(model.summary())
+    model_path = os.path.join('checkpoints', '2020-07-29_19-05')
+    model = keras.models.load_model(model_path)
 
     predictions = output_encoder.inverse_transform(model.predict(X))
 
-    get_results(predictions, y, operations)
+    get_results(predictions, y)
 
 
 if __name__ == '__main__':

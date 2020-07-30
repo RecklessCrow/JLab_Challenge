@@ -7,6 +7,7 @@ Author: CJ Paterno
 Date: 02/20/2020
 """
 
+import os
 from random import choice, randrange
 
 import numpy as np
@@ -16,9 +17,11 @@ from sklearn.model_selection import train_test_split
 from constants import normalizer, OPERATOR_IMAGES, OPERATORS, output_encoder
 
 images, labels = loadlocal_mnist(
-    images_path='data/train-images.idx3-ubyte',
-    labels_path='data/train-labels.idx1-ubyte'
+    images_path=os.path.join('data', 'train-images.idx3-ubyte'),
+    labels_path=os.path.join('data', 'train-labels.idx1-ubyte')
 )
+
+images = normalizer.transform(images)
 
 # Split data into train, val, test sets. Use random state to ensure the same elements are in
 # the sets across training sessions
@@ -41,15 +44,15 @@ def preprocess_input(some_input):
         # Split from the input array, we know images are 28 x 28 and that there is a single
         # character for the operator between the two images
         a_image = [an_input[i] for i in range(0, 28 * 28)]
+        a_image = normalizer.transform(np.array(a_image).astype(np.float).reshape(1, -1))[0]
         a_image = np.reshape(a_image, (-1, 28)).astype(np.float)
-        a_image = normalizer.transform(a_image)
 
         op = an_input[28 * 28]
         op_image = OPERATOR_IMAGES.get(op)
 
         b_image = [an_input[i] for i in range(28 * 28 + 1, len(an_input))]
+        b_image = normalizer.transform(np.array(b_image).astype(np.float).reshape(1, -1))[0]
         b_image = np.reshape(b_image, (-1, 28)).astype(np.float)
-        b_image = normalizer.transform(b_image)
 
         input_images = [a_image, op_image, b_image]
 
@@ -90,7 +93,6 @@ def generate_images(batch_size=250000, gen_mode=0):
     for _ in range(batch_size):
         a_index = randrange(0, len(image_set))
         a_image = np.array(image_set[a_index]).reshape((-1, 28))
-        a_image = normalizer.transform(a_image)
         a_label = label_set[a_index]
 
         op = choice(OPERATORS)
@@ -98,7 +100,6 @@ def generate_images(batch_size=250000, gen_mode=0):
 
         b_index = randrange(0, len(image_set))
         b_image = np.array(image_set[b_index]).reshape((-1, 28))
-        b_image = normalizer.transform(b_image)
         b_label = label_set[b_index]
 
         X_input = [a_image, op_image, b_image]

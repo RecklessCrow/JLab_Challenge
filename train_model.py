@@ -6,6 +6,7 @@ Module to create, train, and test a keras model
 Author: CJ Paterno
 Date: 02/20/2020
 """
+import os
 
 from datetime import datetime
 
@@ -16,6 +17,9 @@ from keras.models import Sequential
 
 from constants import output_encoder
 from data_generator import generator, generate_images
+
+# Use CPU for training. Remove for GPU training.
+# os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 
 def make_model(num_out=49):
@@ -75,7 +79,7 @@ def make_model(num_out=49):
 
 
 # Current date to the minute for logging
-curr_date = datetime.now().strftime("%Y-%m-%d_%H:%M")
+curr_date = datetime.now().strftime("%Y-%m-%d_%H-%M")
 
 
 def train(load_file=None, save_file=None):
@@ -84,9 +88,9 @@ def train(load_file=None, save_file=None):
     :param load_file: load a previously saved checkpoint or model
     :param save_file: file to save trained model to
     """
-    epochs = 250
-    steps_per_epoch = 50
-    batch_size = epochs * steps_per_epoch
+    epochs = 100
+    steps_per_epoch = 1000
+    batch_size = 10000
 
     # Create model
     # Load checkpoint if exists
@@ -98,9 +102,9 @@ def train(load_file=None, save_file=None):
     print(model.summary())
 
     # Create callbacks
-    log_dir = f'./logs/scalars/{curr_date}'
+    log_dir = os.path.join('logs', 'scalars', curr_date)
     tensorboard_callback = keras.callbacks.TensorBoard(log_dir=log_dir)
-    checkpoint_file = f'./checkpoints/{curr_date}'
+    checkpoint_file = os.path.join('checkpoints', curr_date)
     checkpoint_callback = keras.callbacks.ModelCheckpoint(filepath=checkpoint_file)
 
     # Train model
@@ -116,7 +120,7 @@ def train(load_file=None, save_file=None):
     score = test(model)
 
     if save_file is None:
-        model.save(f'./models/{score}')
+        model.save(os.path.join('models', str(score)))
     else:
         model.save(save_file)
 
@@ -140,7 +144,7 @@ def test(model):
     return sse
 
 
-def get_results(actual, expected, operations):
+def get_results(actual, expected, operations=None):
     """
     Calculate sum squared error and print test results
     :param actual: Model predicted results
@@ -154,8 +158,9 @@ def get_results(actual, expected, operations):
 
     for i, result in enumerate(actual):
         if result != expected[i][0]:
-            # print(f'Expected: {operations[i]} = {expected[i][0]}\n'
-            #       f'Actual:   {result[0]}\n')
+            if operations is not None:
+                print(f'Expected: {operations[i]} = {expected[i][0]}\n'
+                      f'Actual:   {result[0]}\n')
             num_wrong += 1
 
     percent_wrong = num_wrong / len(expected) * 100
@@ -169,5 +174,5 @@ def get_results(actual, expected, operations):
 
 
 if __name__ == '__main__':
-
-    train()
+    checkpoint = os.path.join('checkpoints', '2020-07-30_00-31')
+    train(save_file=checkpoint)
