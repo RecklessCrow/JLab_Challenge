@@ -7,11 +7,11 @@ Author: CJ Paterno
 Date: 02/20/2020
 """
 import os
-
 from datetime import datetime
 
 import keras
 import numpy as np
+import tensorflow as tf
 from keras.layers import Conv2D, Dense, Flatten, Permute
 from keras.models import Sequential
 
@@ -20,6 +20,14 @@ from data_generator import generator, generate_images
 
 # Use CPU for training. Remove for GPU training.
 # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+
+# Fix memory allocation issues for GPU training
+config = tf.compat.v1.ConfigProto(gpu_options=tf.compat.v1.GPUOptions(per_process_gpu_memory_fraction=0.8)
+                                  # device_count = {'GPU': 1}
+                                  )
+config.gpu_options.allow_growth = True
+session = tf.compat.v1.Session(config=config)
+tf.compat.v1.keras.backend.set_session(session)
 
 
 def make_model(num_out=49):
@@ -88,9 +96,9 @@ def train(load_file=None, save_file=None):
     :param load_file: load a previously saved checkpoint or model
     :param save_file: file to save trained model to
     """
-    epochs = 100
+    epochs = 50
     steps_per_epoch = 1000
-    batch_size = 10000
+    batch_size = 5000
 
     # Create model
     # Load checkpoint if exists
@@ -105,7 +113,8 @@ def train(load_file=None, save_file=None):
     log_dir = os.path.join('logs', 'scalars', curr_date)
     tensorboard_callback = keras.callbacks.TensorBoard(log_dir=log_dir)
     checkpoint_file = os.path.join('checkpoints', curr_date)
-    checkpoint_callback = keras.callbacks.ModelCheckpoint(filepath=checkpoint_file)
+    checkpoint_callback = keras.callbacks.ModelCheckpoint(filepath=checkpoint_file, monitor='val_loss',
+                                                          verbose=1, save_best_only=True, mode='min')
 
     # Train model
     model.fit(

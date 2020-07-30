@@ -18,6 +18,8 @@ from train_model import get_results
 
 
 # Score to beat, SSE: 35880.24
+# Use CPU for training. Remove for GPU training.
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
 
 def main():
@@ -39,7 +41,7 @@ def main():
 
     X = preprocess_input(X)
 
-    model_path = os.path.join('checkpoints', '2020-07-29_19-05')
+    model_path = os.path.join('checkpoints', '2020-07-30_09-14')
     model = keras.models.load_model(model_path)
 
     predictions = output_encoder.inverse_transform(model.predict(X))
