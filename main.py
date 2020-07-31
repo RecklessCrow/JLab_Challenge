@@ -41,7 +41,7 @@ def main():
 
     X = preprocess_input(X)
 
-    model_path = os.path.join('checkpoints', '2020-07-30_09-14')
+    model_path = os.path.join('checkpoints', '2020-07-30_15-26')
     model = keras.models.load_model(model_path)
 
     predictions = output_encoder.inverse_transform(model.predict(X))

@@ -41,7 +41,7 @@ def make_model(num_out=49):
 
     model.add(Permute(
         (2, 3, 1),
-        input_shape=(3, 28, 28)
+        input_shape=(3, 28, 28)  # 3 28x28 images
     ))
 
     model.add(Conv2D(
@@ -113,15 +113,15 @@ def train(load_file=None, save_file=None):
     log_dir = os.path.join('logs', 'scalars', curr_date)
     tensorboard_callback = keras.callbacks.TensorBoard(log_dir=log_dir)
     checkpoint_file = os.path.join('checkpoints', curr_date)
-    checkpoint_callback = keras.callbacks.ModelCheckpoint(filepath=checkpoint_file, monitor='val_loss',
-                                                          verbose=1, save_best_only=True, mode='min')
+    checkpoint_callback = keras.callbacks.ModelCheckpoint(filepath=checkpoint_file, monitor='val_accuracy',
+                                                          verbose=1, save_best_only=True, mode='max')
 
     # Train model
     model.fit(
         generator(batch_size=batch_size, gen_mode=0),
         epochs=epochs,
         steps_per_epoch=steps_per_epoch,
-        validation_data=generator(batch_size=batch_size // 3, gen_mode=1),
+        validation_data=generator(batch_size=10000, gen_mode=1),
         validation_steps=steps_per_epoch // 3,
         callbacks=[tensorboard_callback, checkpoint_callback],
     )
@@ -183,5 +183,5 @@ def get_results(actual, expected, operations=None):
 
 
 if __name__ == '__main__':
-    checkpoint = os.path.join('checkpoints', '2020-07-30_00-31')
-    train(save_file=checkpoint)
+    checkpoint = None  # os.path.join('checkpoints', '2020-07-30_15-26')
+    train(load_file=checkpoint)

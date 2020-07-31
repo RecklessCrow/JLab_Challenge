@@ -22,6 +22,7 @@ images, labels = loadlocal_mnist(
 )
 
 images = normalizer.transform(images)
+images = [i.reshape(-1, 28) for i in images]
 
 # Split data into train, val, test sets. Use random state to ensure the same elements are in
 # the sets across training sessions
@@ -72,6 +73,8 @@ def generate_images(batch_size=250000, gen_mode=0):
                         3: raw set
     :return: data, labels, operations
     """
+    if batch_size <= 0:
+        batch_size = 1
 
     image_set = X_train
     label_set = y_train
@@ -92,23 +95,23 @@ def generate_images(batch_size=250000, gen_mode=0):
 
     for _ in range(batch_size):
         a_index = randrange(0, len(image_set))
-        a_image = np.array(image_set[a_index]).reshape((-1, 28))
+        a_image = np.array(image_set[a_index])
         a_label = label_set[a_index]
 
         op = choice(OPERATORS)
         op_image = np.array(OPERATOR_IMAGES.get(op))
 
         b_index = randrange(0, len(image_set))
-        b_image = np.array(image_set[b_index]).reshape((-1, 28))
+        b_image = np.array(image_set[b_index])
         b_label = label_set[b_index]
 
         X_input = [a_image, op_image, b_image]
         operation = f'{a_label} {op} {b_label}'
         y_input = [eval(operation)]
-        operations.append(operation)
 
         X.append(X_input)
         y.append(y_input)
+        operations.append(operation)
 
     X = np.array(X)
     y = output_encoder.transform(y).toarray()
@@ -119,8 +122,8 @@ def generate_images(batch_size=250000, gen_mode=0):
 def generator(batch_size, gen_mode=0):
     """
 
-    :param gen_mode:
     :param batch_size:
+    :param gen_mode:
     :return:
     """
 
